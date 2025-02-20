@@ -1,0 +1,58 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: attendance2_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: akucantik
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  flask:
+    build:
+      context: ./scripts  
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+      - "8080:8080"
+    networks:
+      app-network:
+        aliases:
+          - flask5000
+          - flask8080
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_RUN_HOST=0.0.0.0
+    command: ["python", "app.py"]
+    restart: always   
+
+  apache:
+    build:
+      context: ./apache  
+    depends_on:
+      - flask
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+    volumes:
+      - ./apache/apache.conf:/etc/apache2/sites-available/000-default.conf
+    environment:
+      - APACHE_LOG_DIR=/var/log/apache2
+    restart: always  
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pgdata:
